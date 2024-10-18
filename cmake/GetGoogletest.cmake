@@ -1,7 +1,8 @@
 # Search prebuilt googletest. If nothing found - download, unpack, build and then search again
 # allow to get googletest from bundle also (instead of download)
 
-set ( GTEST_GITHUB "https://github.com/google/googletest/archive/main.zip" )
+# set ( GTEST_GITHUB "https://github.com/google/googletest/archive/main.zip" )
+set ( GTEST_GITHUB "${MANTICORE_SOURCE_DIR}/external_packages/googletest-main.zip" )
 set ( GTEST_ZIP "googletest-master.zip" ) # that is default filename if you download GTEST_GITHUB using browser
 set ( GTEST_URL "${LIBS_BUNDLE}/${GTEST_ZIP}" )
 
@@ -20,6 +21,8 @@ endif ()
 # not found. Populate and build cache package for now and future usage.
 MESSAGE ( STATUS "prebuilt googletest wasn't found. Will build it right now..." )
 select_nearest_url ( GTEST_PLACE "gtests" ${GTEST_URL} ${GTEST_GITHUB} )
+
+message(STATUS "-----------------recode----------------- Download locally: ${ICU_GITHUB}")
 
 # build as external project and install into cache
 get_build ( GTEST_BUILD gtest )
