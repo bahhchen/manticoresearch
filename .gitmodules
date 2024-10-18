@@ -1,0 +1,3 @@
+[submodule "external_packages/columnar"]
+	path = external_packages/columnar
+	url = https://github.com/bahhchen/columnar.git

@@ -1,6 +1,7 @@
 cmake_minimum_required ( VERSION 3.17 FATAL_ERROR )
 
-set ( UNIALGO_GITHUB "https://github.com/manticoresoftware/uni-algo/archive/refs/tags/v0.7.2.tar.gz" )
+# set ( UNIALGO_GITHUB "https://github.com/manticoresoftware/uni-algo/archive/refs/tags/v0.7.2.tar.gz" )
+set ( UNIALGO_GITHUB "${MANTICORE_SOURCE_DIR}/external_packages/uni-algo-0.7.2.tar.gz" )
 set ( UNIALGO_BUNDLE "${LIBS_BUNDLE}/unialgo-v0.7.2.tar.gz" )
 set ( UNIALGO_SRC_MD5 "11f64b34000f3b98fa806d01eeeda70b" )
 
@@ -9,6 +10,8 @@ include ( update_bundle )
 # determine destination folder where we expect pre-built uni-algo
 find_package ( uni-algo QUIET CONFIG )
 return_if_target_found ( uni-algo::uni-algo "found ready (no need to build)" )
+
+message(STATUS "-----------------recode----------------- Download locally: ${UNIALGO_GITHUB}")
 
 # not found. Populate and prepare sources
 select_nearest_url ( UNIALGO_PLACE uni-algo ${UNIALGO_BUNDLE} ${UNIALGO_GITHUB} )

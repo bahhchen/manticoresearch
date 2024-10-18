@@ -2,9 +2,15 @@ cmake_minimum_required ( VERSION 3.17 )
 
 project ( columnar-api-build NONE )
 
+#message(STATUS "-----------------recode----------------- Download locally: ${COLUMNAR_LOCATOR}")
+#message(STATUS "-----------------recode----------------- Download locally: ${CMAKE_ARGS}")
+#message(STATUS "-----------------recode----------------- Download locally: ${INSTALL_COMMAND}")
+#message(STATUS "-----------------recode----------------- Download locally: ${CMAKE_COMMAND}")
+
 include ( ExternalProject )
 ExternalProject_Add ( columnar_api_populate
-		${COLUMNAR_LOCATOR}
+		#${COLUMNAR_LOCATOR}
+		SOURCE_DIR ${MANTICORE_SOURCE_DIR}/external_packages/columnar
 		CMAKE_ARGS -DAPI_ONLY=ON
 		BUILD_COMMAND ""
 		INSTALL_COMMAND "${CMAKE_COMMAND}" --install . --config RelWithDebInfo --prefix "${COLUMNAR_BUILD}"

@@ -9,11 +9,17 @@ set ( WSREP_REPO "https://github.com/percona/wsrep-API" )
 set ( WSREP_REV "2c211e1" ) # or "percona-3.x-5.7-v31"
 set ( WSREP_SRC_MD5 "da31c60185c0fb4a35cf5e092db82059" ) # or "cc77ccec1a8144a6d9009ac603400406" when use "percona..."
 
-set ( GALERA_GITHUB "${GALERA_REPO}/archive/${GALERA_REV}.zip" )
+# set ( GALERA_GITHUB "${GALERA_REPO}/archive/${GALERA_REV}.zip" )
+set ( GALERA_GITHUB "${MANTICORE_SOURCE_DIR}/external_packages/galera.zip" )
 set ( GALERA_BUNDLE "${LIBS_BUNDLE}/galera-${GALERA_REV}.zip" )
 
-set ( WSREP_GITHUB "${WSREP_REPO}/archive/${WSREP_REV}.zip" )
+# set ( WSREP_GITHUB "${WSREP_REPO}/archive/${WSREP_REV}.zip" )
+set ( WSREP_GITHUB "${MANTICORE_SOURCE_DIR}/external_packages/wsrep.zip" )
 set ( WSREP_BUNDLE "${LIBS_BUNDLE}/wsrep-${WSREP_REV}.zip" )
+
+
+message(STATUS "-----------------recode----------------- Download locally: ${GALERA_GITHUB}")
+message(STATUS "-----------------recode----------------- Download locally: ${WSREP_GITHUB}")
 
 if (DEFINED WITH_GALERA AND NOT WITH_GALERA) # already defined and required NOT to be used
 	return ()

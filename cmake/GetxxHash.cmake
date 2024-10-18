@@ -4,7 +4,8 @@ set ( XXH_REPO "https://github.com/manticoresoftware/xxHash" )
 set ( XXH_REV "71c6c93" )
 set ( XXH_SRC_MD5 "705f9786460daf8712670eff92d94778" )
 
-set ( XXH_GITHUB "${XXH_REPO}/archive/${XXH_REV}.zip" )
+# set ( XXH_GITHUB "${XXH_REPO}/archive/${XXH_REV}.zip" )
+set ( XXH_GITHUB "${MANTICORE_SOURCE_DIR}/external_packages/xxHash.zip" )
 set ( XXH_BUNDLE "${LIBS_BUNDLE}/xxHash-${XXH_REV}.zip" )
 
 include ( update_bundle )
@@ -12,6 +13,8 @@ include ( update_bundle )
 # determine destination folder where we expect pre-built xxhash
 find_package ( xxHash QUIET CONFIG )
 return_if_target_found ( xxHash::xxhash "found ready (no need to build)" )
+
+message(STATUS "-----------------recode----------------- Download locally: ${XXH_GITHUB}")
 
 # not found. Populate and prepare sources
 select_nearest_url ( XXH_PLACE xxhash ${XXH_BUNDLE} ${XXH_GITHUB} )

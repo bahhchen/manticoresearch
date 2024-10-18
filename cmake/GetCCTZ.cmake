@@ -5,14 +5,18 @@ set ( CCTZ_REV "cf11f75" )
 
 set ( CCTZ_SRC_MD5 "d66ec00a70be233acf826dcd2a77e57a" )
 
-set ( CCTZ_GITHUB "${CCTZ_REPO}/archive/${CCTZ_REV}.zip" )
+# set ( CCTZ_GITHUB "${CCTZ_REPO}/archive/${CCTZ_REV}.zip" )
+set ( CCTZ_GITHUB "${MANTICORE_SOURCE_DIR}/external_packages/cctz.zip" )
 set ( CCTZ_BUNDLE "${LIBS_BUNDLE}/cctz-${CCTZ_REV}.zip" )
+
 
 include ( update_bundle )
 
 # try to find quietly (will work most time
 find_package ( cctz QUIET CONFIG )
 return_if_target_found ( cctz::cctz "found ready (no need to build)" )
+
+message(STATUS "-----------------recode----------------- Download locally: ${CCTZ_GITHUB}")
 
 # not found. Populate and prepare sources
 select_nearest_url ( CCTZ_PLACE cctz ${CCTZ_BUNDLE} ${CCTZ_GITHUB} )

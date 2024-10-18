@@ -19,7 +19,7 @@ if (DEFINED ENV{WIN_BUNDLE})
 endif ()
 
 if (NOT LIBS_BUNDLE)
-	get_filename_component ( LIBS_BUNDLE "${MANTICORE_SOURCE_DIR}/../bundle" ABSOLUTE )
+	get_filename_component ( LIBS_BUNDLE "${MANTICORE_SOURCE_DIR}/bundle" ABSOLUTE )
 endif ()
 
 if (NOT IS_ABSOLUTE ${LIBS_BUNDLE})
@@ -38,7 +38,7 @@ if (DEFINED ENV{CACHEB})
 endif ()
 
 if (NOT DEFINED CACHEB)
-	get_filename_component ( CACHEB "${LIBS_BUNDLE}/../cache" ABSOLUTE )
+	get_filename_component ( CACHEB "${LIBS_BUNDLE}/cache" ABSOLUTE )
 endif ()
 
 if (NOT IS_ABSOLUTE ${CACHEB})

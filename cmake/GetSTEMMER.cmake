@@ -15,7 +15,8 @@
 # If no file found, it will try to fetch it from
 # https://snowballstem.org/dist/libstemmer_c.tgz
 
-set ( STEMMER_REMOTE "https://snowballstem.org/dist/libstemmer_c.tgz" )
+# set ( STEMMER_REMOTE "https://snowballstem.org/dist/libstemmer_c.tgz" )
+set ( STEMMER_REMOTE "${MANTICORE_SOURCE_DIR}/external_packages/libstemmer_c.tgz" )
 set ( STEMMER_BUNDLEZIP "${LIBS_BUNDLE}/libstemmer_c.tgz" )
 set ( STEMMER_SRC_MD5 "f8288a861db7c97dc4750020c7c7aa6f" )
 
@@ -31,6 +32,8 @@ endif ()
 # determine destination folder where we expect pre-built stemmer
 find_package ( stemmer CONFIG )
 return_if_target_found ( stemmer::stemmer "ready (no need to build)" )
+
+message(STATUS "-----------------recode----------------- Download locally: ${STEMMER_REMOTE}")
 
 # not found. Populate and prepare sources
 select_nearest_url ( STEMMER_PLACE stemmer ${STEMMER_BUNDLEZIP} ${STEMMER_REMOTE} )

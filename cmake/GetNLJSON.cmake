@@ -1,6 +1,7 @@
 cmake_minimum_required ( VERSION 3.17 FATAL_ERROR )
 
-set ( NLJSON_GITHUB "http://github.com/nlohmann/json/archive/refs/tags/v3.10.5.tar.gz" )
+# set ( NLJSON_GITHUB "http://github.com/nlohmann/json/archive/refs/tags/v3.10.5.tar.gz" )
+set ( NLJSON_GITHUB "${MANTICORE_SOURCE_DIR}/external_packages/json-3.10.5.tar.gz" )
 set ( NLJSON_BUNDLE "${LIBS_BUNDLE}/nljson-v3.10.5.tar.gz" )
 set ( NLJSON_SRC_MD5 "5b946f7d892fa55eabec45e76a20286b" )
 
@@ -9,6 +10,9 @@ include ( update_bundle )
 # determine destination folder where we expect pre-built nljson
 find_package ( nlohmann_json QUIET CONFIG )
 return_if_target_found ( nlohmann_json::nlohmann_json "found ready (no need to build)" )
+
+
+message(STATUS "-----------------recode----------------- Download locally: ${NLJSON_GITHUB}")
 
 # not found. Populate and prepare sources
 select_nearest_url ( NLJSON_PLACE nlohmann_json ${NLJSON_BUNDLE} ${NLJSON_GITHUB} )

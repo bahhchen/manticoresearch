@@ -8,7 +8,8 @@
 # implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 # See the License for more information.
 #=============================================================================
-set ( ICU_GITHUB "https://github.com/unicode-org/icu/releases/download/release-65-1/icu4c-65_1-src.tgz" )
+# set ( ICU_GITHUB "https://github.com/unicode-org/icu/releases/download/release-65-1/icu4c-65_1-src.tgz" )
+set ( ICU_GITHUB "${MANTICORE_SOURCE_DIR}/external_packages/icu4c-65_1-src.tgz" )
 set ( ICU_BUNDLE "${LIBS_BUNDLE}/icu4c-65_1-src.tgz" )
 set ( ICU_SRC_MD5 "d1ff436e26cabcb28e6cb383d32d1339" )
 
@@ -49,6 +50,8 @@ endif ()
 # determine destination folder where we expect pre-built icu
 find_package ( icu QUIET CONFIG )
 return_if_target_found ( icu::icu "ready (no need to build)" )
+
+message(STATUS "-----------------recode----------------- Download locally: ${ICU_GITHUB}")
 
 # not found. Populate and prepare sources
 select_nearest_url ( ICU_PLACE icu ${ICU_BUNDLE} ${ICU_GITHUB} )

@@ -19,7 +19,8 @@ set ( RE2_REPO "https://github.com/manticoresoftware/re2" )
 set ( RE2_BRANCH "2015-06-01" ) # specific tag for reproducable builds
 set ( RE2_SRC_MD5 "023053ef20051a0fc5911a76869be59f" )
 
-set ( RE2_GITHUB "${RE2_REPO}/archive/${RE2_BRANCH}.zip" )
+# set ( RE2_GITHUB "${RE2_REPO}/archive/${RE2_BRANCH}.zip" )
+set ( RE2_GITHUB "${MANTICORE_SOURCE_DIR}/external_packages/re2-2015-06-01.zip" )
 set ( RE2_BUNDLE "${LIBS_BUNDLE}/re2-${RE2_BRANCH}.zip" )
 
 cmake_minimum_required ( VERSION 3.17 FATAL_ERROR )
@@ -56,28 +57,31 @@ endfunction ()
 # cb to finalize RE2 sources (patch, add cmake)
 function ( PREPARE_RE2 RE2_SRC )
 	# check if it is already patched before
-	if (EXISTS "${RE2_SRC}/is_patched.txt")
-		return ()
-	endif ()
+	# if (EXISTS "${RE2_SRC}/is_patched.txt")
+	# 	return ()
+	# endif ()
 
-	file ( COPY "${MANTICORE_SOURCE_DIR}/libre2/libre2.patch" DESTINATION "${RE2_SRC}" )
-	patch_git ( PATCHED ${RE2_SRC} )
-	if (NOT PATCHED)
-		patch_patch ( PATCHED ${RE2_SRC} )
-	endif ()
+	# file ( COPY "${MANTICORE_SOURCE_DIR}/libre2/libre2.patch" DESTINATION "${RE2_SRC}" )
+	# patch_git ( PATCHED ${RE2_SRC} )
+	# if (NOT PATCHED)
+	# 	patch_patch ( PATCHED ${RE2_SRC} )
+	# endif ()
 
-	if (NOT PATCHED)
-		message ( FATAL_ERROR "Couldn't patch RE2 distro. No Git or Patch found" )
-		return ()
-	endif ()
+	# if (NOT PATCHED)
+	# 	message ( FATAL_ERROR "Couldn't patch RE2 distro. No Git or Patch found" )
+	# 	return ()
+	# endif ()
 
-	file ( WRITE "${RE2_SRC}/is_patched.txt" "ok" )
+	# file ( WRITE "${RE2_SRC}/is_patched.txt" "ok" )
 	execute_process ( COMMAND ${CMAKE_COMMAND} -E copy_if_different "${MANTICORE_SOURCE_DIR}/libre2/CMakeLists.txt" "${RE2_SRC}/CMakeLists.txt" )
 endfunction ()
+
+message(STATUS "-----------------recode----------------- Download locally: ${RE2_GITHUB}")
 
 # prepare sources
 select_nearest_url ( RE2_PLACE re2 ${RE2_BUNDLE} ${RE2_GITHUB} )
 fetch_and_check ( re2 ${RE2_PLACE} ${RE2_SRC_MD5} RE2_SRC )
+message(STATUS "-----------------recode----------------- Download locally222: ${RE2_SRC}")
 prepare_re2 ( ${RE2_SRC} )
 
 # build
