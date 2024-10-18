@@ -17,10 +17,6 @@ set ( GALERA_BUNDLE "${LIBS_BUNDLE}/galera-${GALERA_REV}.zip" )
 set ( WSREP_GITHUB "${MANTICORE_SOURCE_DIR}/external_packages/wsrep.zip" )
 set ( WSREP_BUNDLE "${LIBS_BUNDLE}/wsrep-${WSREP_REV}.zip" )
 
-
-message(STATUS "-----------------recode----------------- Download locally: ${GALERA_GITHUB}")
-message(STATUS "-----------------recode----------------- Download locally: ${WSREP_GITHUB}")
-
 if (DEFINED WITH_GALERA AND NOT WITH_GALERA) # already defined and required NOT to be used
 	return ()
 endif ()
@@ -63,6 +59,9 @@ if (TARGET galera::galera)
 	diagst ( galera::galera "library found ready (no need to build)" )
 	return ()
 endif ()
+
+message(STATUS "-----------------recode----------------- Download locally: ${GALERA_GITHUB}")
+message(STATUS "-----------------recode----------------- Download locally: ${WSREP_GITHUB}")
 
 # not found. Populate and build cache package for now and future usage.
 select_nearest_url ( GALERA_PLACE "galera" ${GALERA_BUNDLE} ${GALERA_GITHUB} )
