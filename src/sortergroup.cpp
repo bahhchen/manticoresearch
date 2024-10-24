@@ -480,7 +480,7 @@ public:
 			// need to clean up matches NOT from m_dIData with current schema
 			// as after schema change data_ptr attributes will have garbage in ptr part for matches not processed by tProcessor
 			// and global sorters have differrent clean up code path that do not handle this garbage as usual sorters do
-			for ( int i = this->m_dIData.GetLength(); i < m_dData.GetLength(); i++ )
+			for ( int i = this->m_dIData.GetLength(); i < CSphMatchQueueTraits::m_dData.GetLength(); i++ )
 			{
 				int iId = *(this->m_dIData.Begin()+i);
 				CSphMatch & tMatch = m_dData[iId];
