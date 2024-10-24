@@ -85,3 +85,5 @@
 # misc
 /cache
 /local_*_src.txt
+
+/.vscode
