@@ -333,7 +333,9 @@ include ( SetBuildType )
 diag ( installed )
 if (NOT installed) # GNUInstallDirs wasn't yet included...
 	include ( GNUInstallDirs )
-	SET ( LOCALDATADIR "${CMAKE_INSTALL_FULL_LOCALSTATEDIR}" ) # will be used also in the app
+	if (NOT DEFINED LOCALDATADIR)
+		SET ( LOCALDATADIR "${CMAKE_INSTALL_FULL_LOCALSTATEDIR}" ) # will be used also in the app
+	endif()
 	if (WIN32)
 		set ( CMAKE_INSTALL_DOCDIR "${CMAKE_INSTALL_DATAROOTDIR}/doc" )
 		SET ( FULL_SHARE_DIR "${CMAKE_INSTALL_FULL_DATADIR}" )
@@ -350,7 +352,9 @@ if (NOT installed) # GNUInstallDirs wasn't yet included...
 	else ()
 		set ( CMAKE_INSTALL_DOCDIR "${CMAKE_INSTALL_DATAROOTDIR}/doc/manticore" )
 		configure_config ( lib/manticore )
-		SET ( FULL_SHARE_DIR "${CMAKE_INSTALL_FULL_DATADIR}/manticore" )
+		if (NOT DEFINED FULL_SHARE_DIR)
+			SET ( FULL_SHARE_DIR "${CMAKE_INSTALL_FULL_DATADIR}/manticore" )
+		endif()
 		SET ( CMAKE_INSTALL_FULL_LOCALLIBDIR "${CMAKE_INSTALL_FULL_LIBDIR}" )
 		install ( FILES ${MANTICORE_BINARY_DIR}/manticore.conf DESTINATION ${CMAKE_INSTALL_SYSCONFDIR}/manticoresearch COMPONENT common )
 		install ( DIRECTORY misc/stopwords DESTINATION ${CMAKE_INSTALL_DATADIR}/manticore COMPONENT common )
