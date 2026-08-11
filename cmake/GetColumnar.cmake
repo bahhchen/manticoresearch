@@ -1,85 +1,43 @@
-include ( update_bundle )
+include ( local_deps )
 
-# How to perform version update (check-list):
+# Offline build: the columnar API headers are taken directly from ${MANTICORE_DEPS_DIR}/columnar.
 #
-# Say, you want to upgrade secondary headers to v.13
+# Manticore never builds nor links with columnar - the only thing it needs is a handful of interface
+# headers (columnar/columnar.h, secondary/secondary.h, knn/knn.h, util/util.h and the common/ headers
+# they pull in). Upstream obtained them by git-cloning columnar and running a nested cmake install
+# with -DAPI_ONLY=ON, which only copies those headers around. Here the three INTERFACE targets are
+# declared straight on the source tree instead, so there is no clone, no nested configure and no
+# find_package involved.
+#
+# How to perform a version update (check-list):
 # --------- On columnar side ------------
-# 1. Change value of constant LIB_VERSION in secondary/secondary.h to 13
-# 2. Commit and publish the changes.
-# 3. Wait until changes are mirrored to github. Ensure it is tagged as 'c16-s13' (mirroring script should do it)
-# 4. If the tag wasn't appear, push it manually, as:
-#	git tag c16-s13
-#	git push origin c16-s13 # here you must write your alias of github (NOT gitlab) repo instead of 'origin'
+# 1. Change the value of the constant LIB_VERSION in the corresponding header (e.g. secondary/secondary.h)
+# 2. Commit, publish and tag as 'c<columnar>-s<secondary>-k<knn>'
 # --------- On manticore side ------------
-# 1. Fix the numbers NEED_COLUMNAR_API and NEED_SECONDARY_API according to your upgrade
-# 2. Reconfigure build.
+# 1. Move the deps/columnar submodule to that tag
+# 2. Fix NEED_COLUMNAR_API / NEED_SECONDARY_API / NEED_KNN_API below accordingly
+# The check right after reading the headers replaces the old `find_package(... EXACT)` guard: a
+# mismatch between the numbers below and the sources in deps/ fails the configure.
 #
-# Notice, with tagged revision in columnar repo you don't need to touch `columnar_src.txt` file anymore, however you
-# still can do it for any specific requirements.
+# Upstream origin (kept for version upgrades): https://github.com/manticoresoftware/columnar, tag c27-s19-k9 (mcl 10.2.0)
 
 # Versions of API headers we are need to build with.
 set ( NEED_COLUMNAR_API 27 )
 set ( NEED_SECONDARY_API 19 )
 set ( NEED_KNN_API 9 )
 
-# Note: we don't build, neither link with columnar. Only thing we expect to get is a few interface headers, aka 'columnar_api'.
-# Actual usage of columnar is solely defined by availability of the module named below. That module is build (or not built)
-# separately outside the manticore.
-
-# In order to debug columnar, you should, namely, debug columnar. Open columnar's source, provide MANTICORE_LOCATOR there and configure.
-# It will be 'inverted' project with columnar as main code and manticore as helper aside.
-# If you provide locator as 'SOURCE_DIR /path/to/manticore/sources', they will be used inplace, without any copying, and will be available
-# to edit in IDE.
-
+# Actual usage of columnar is solely defined by availability of the modules named below. They are
+# built separately outside of manticore and loaded at runtime from MANTICORE_MODULES.
 if (WIN32)
 	set ( EXTENSION dll )
-else()
+else ()
 	set ( EXTENSION so )
-endif()
+endif ()
 
 set ( LIB_MANTICORE_COLUMNAR "lib_manticore_columnar.${EXTENSION}" )
 set ( LIB_MANTICORE_SECONDARY "lib_manticore_secondary.${EXTENSION}" )
 set ( LIB_MANTICORE_KNN "lib_manticore_knn.${EXTENSION}" )
 set ( LIB_MANTICORE_KNN_EMBEDDINGS "lib_manticore_knn_embeddings.${EXTENSION}" )
-
-macro ( backup_paths )
-	set ( _CMAKE_FIND_ROOT_PATH "${CMAKE_FIND_ROOT_PATH}" )
-	set ( _CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH}" )
-endmacro()
-
-macro ( restore_paths )
-	set ( CMAKE_FIND_ROOT_PATH "${_CMAKE_FIND_ROOT_PATH}" )
-	set ( CMAKE_PREFIX_PATH "${_CMAKE_PREFIX_PATH}" )
-endmacro ()
-
-macro ( return_if_all_api_found )
-	if (TARGET columnar::columnar_api)
-		set ( _HAS_COLUMNAR ON )
-	endif ()
-
-	if (TARGET columnar::secondary_api)
-		set ( _HAS_SECONDARY ON )
-	endif ()
-
-	if (TARGET columnar::knn_api)
-		set ( _HAS_KNN ON )
-	endif ()
-
-	if (_HAS_COLUMNAR AND _HAS_SECONDARY AND _HAS_KNN)
-		include ( FeatureSummary )
-		set_package_properties ( columnar PROPERTIES TYPE RUNTIME
-				DESCRIPTION "a column-oriented storage library with a low memory footprint, designed to handle large volumes of data, a secondary index library, and a k-nearest neighbor search library"
-				URL "https://github.com/manticoresoftware/columnar/"
-				)
-		trace ( columnar::columnar_api )
-		trace ( columnar::secondary_api )
-		trace ( columnar::knn_api )
-
-		# restore prev find paths to avoid polishing global scope
-		restore_paths()
-		return ()
-	endif ()
-endmacro ()
 
 # Columnar might be already provided by inverted inclusion - i.e. when sources of manticore included as testing tool into columnar's sources
 if (TARGET columnar::columnar_api)
@@ -87,41 +45,49 @@ if (TARGET columnar::columnar_api)
 	return ()
 endif ()
 
-# expected version
-set ( NEED_API_NUMERIC_VERSION "${NEED_COLUMNAR_API}.${NEED_SECONDARY_API}.${NEED_KNN_API}" )
-set ( AUTO_TAG "c${NEED_COLUMNAR_API}-s${NEED_SECONDARY_API}-k${NEED_KNN_API}" )
+# reads 'static const int LIB_VERSION = N;' from an API header and compares it with what we need
+function ( check_api_version HEADER EXPECTED WHAT )
+	if (NOT EXISTS "${HEADER}")
+		message ( FATAL_ERROR "Columnar ${WHAT} API header is missing: ${HEADER}" )
+	endif ()
+	file ( STRINGS "${HEADER}" _line REGEX "static const int[ \t]+LIB_VERSION[ \t]*=" LIMIT_COUNT 1 )
+	if (NOT _line)
+		message ( FATAL_ERROR "Cannot read LIB_VERSION of columnar ${WHAT} API from ${HEADER}" )
+	endif ()
+	string ( REGEX MATCH "[0-9]+" _found "${_line}" )
+	if (NOT _found STREQUAL "${EXPECTED}")
+		message ( FATAL_ERROR
+				"Columnar ${WHAT} API version mismatch: manticore needs ${EXPECTED}, "
+				"${HEADER} provides ${_found}.\n"
+				"Move the deps/columnar submodule to tag c${NEED_COLUMNAR_API}-s${NEED_SECONDARY_API}-k${NEED_KNN_API}." )
+	endif ()
+endfunction ()
 
-# set current path to modules in local usr
-get_build ( COLUMNAR_BUILD "mcl/${AUTO_TAG}" )
+resolve_local_src ( columnar COLUMNAR_SRC )
 
-# store prev find paths to avoid polishing global scope
-backup_paths()
+check_api_version ( "${COLUMNAR_SRC}/columnar/columnar.h" ${NEED_COLUMNAR_API} columnar )
+check_api_version ( "${COLUMNAR_SRC}/secondary/secondary.h" ${NEED_SECONDARY_API} secondary )
+check_api_version ( "${COLUMNAR_SRC}/knn/knn.h" ${NEED_KNN_API} knn )
 
-prepend_prefix ( "${COLUMNAR_BUILD}" )
+# headers are included as 'columnar/columnar.h', 'util/util.h', etc., so the source root is the include dir
+add_library ( columnar::columnar_api INTERFACE IMPORTED GLOBAL )
+set_target_properties ( columnar::columnar_api PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${COLUMNAR_SRC}" )
 
-find_package ( columnar "${NEED_API_NUMERIC_VERSION}" EXACT COMPONENTS columnar_api secondary_api knn_api CONFIG )
-return_if_all_api_found ()
+add_library ( columnar::knn_api INTERFACE IMPORTED GLOBAL )
+set_target_properties ( columnar::knn_api PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${COLUMNAR_SRC}" )
 
-# Not found. get columnar src, extract columnar_api.
-if (DEFINED ENV{COLUMNAR_LOCATOR} AND NOT "$ENV{COLUMNAR_LOCATOR}" STREQUAL "")
-	set ( COLUMNAR_LOCATOR $ENV{COLUMNAR_LOCATOR} )
-	message(STATUS "Using COLUMNAR_LOCATOR from environment variable: ${COLUMNAR_LOCATOR}")
-elseif (EXISTS "${MANTICORE_SOURCE_DIR}/local_columnar_src.txt")
-	file ( STRINGS "${MANTICORE_SOURCE_DIR}/local_columnar_src.txt" COLUMNAR_LOCATOR LIMIT_COUNT 1 )
-	message(STATUS "Using COLUMNAR_LOCATOR from local_columnar_src.txt: ${COLUMNAR_LOCATOR}")
-else ()
-	file ( STRINGS "${MANTICORE_SOURCE_DIR}/columnar_src.txt" COLUMNAR_LOCATOR LIMIT_COUNT 1)
-	message(STATUS "Using COLUMNAR_LOCATOR from columnar_src.txt: ${COLUMNAR_LOCATOR}")
-endif ()
+add_library ( columnar::secondary_api INTERFACE IMPORTED GLOBAL )
+set_target_properties ( columnar::secondary_api PROPERTIES
+		INTERFACE_INCLUDE_DIRECTORIES "${COLUMNAR_SRC}"
+		INTERFACE_LINK_LIBRARIES "columnar::columnar_api;columnar::knn_api" )
 
-string ( CONFIGURE "${COLUMNAR_LOCATOR}" COLUMNAR_LOCATOR ) # that is to expand possible inside variables
+include ( FeatureSummary )
+set_package_properties ( columnar PROPERTIES TYPE RUNTIME
+		DESCRIPTION "a column-oriented storage library with a low memory footprint, designed to handle large volumes of data, a secondary index library, and a k-nearest neighbor search library"
+		URL "https://github.com/manticoresoftware/columnar/"
+		)
 
-configure_file ( ${MANTICORE_SOURCE_DIR}/cmake/columnar-imported.cmake.in columnar-build/CMakeLists.txt )
-execute_process ( COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" . WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/columnar-build )
-execute_process ( COMMAND ${CMAKE_COMMAND} --build . WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/columnar-build )
-
-find_package ( columnar ${NEED_API_NUMERIC_VERSION} EXACT REQUIRED COMPONENTS columnar_api secondary_api knn_api CONFIG )
-return_if_all_api_found ()
-
-# restore prev find paths to avoid polishing global scope
-restore_paths()
+message ( STATUS "Columnar API headers (c${NEED_COLUMNAR_API}-s${NEED_SECONDARY_API}-k${NEED_KNN_API}) taken from ${COLUMNAR_SRC}" )
+trace ( columnar::columnar_api )
+trace ( columnar::secondary_api )
+trace ( columnar::knn_api )

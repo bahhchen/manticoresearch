@@ -1,19 +1,27 @@
-# add the extra targets in the case we want on-the-fly grammar compiler
-find_package ( BISON QUIET )
+# Bison half of the two-state grammar handling - see cmake/grammar_archive.cmake for the whole story.
+#
+# MANTICORE_REGEN_GRAMMAR=OFF (default): bison is never looked for. The archived bis*.c/.h have
+# already been verified and copied into ${BISON_DIR} by stage_archived_grammar(), so MY_BISON has
+# nothing left to do.
+# MANTICORE_REGEN_GRAMMAR=ON: the upstream on-the-fly generation, with bison required.
+
+include ( grammar_archive )
+
 set ( BISON_DIR "${MANTICORE_BINARY_DIR}/config" )
-set ( BIS_FLAGS "" )
-if (BISON_VERSION VERSION_GREATER 3.0)
-	set ( BIS_FLAGS "-Wno-deprecated" )
+
+if (MANTICORE_REGEN_GRAMMAR)
+	find_package ( BISON REQUIRED )
+	set ( BIS_FLAGS "" )
+	if (BISON_VERSION VERSION_GREATER 3.0)
+		# the .y files use bison 2.x spelling (%pure-parser, %error-verbose) on purpose
+		set ( BIS_FLAGS "-Wno-deprecated" )
+	endif ()
+	infomsg ( "MANTICORE_REGEN_GRAMMAR is ON - grammars will be rebuilt by ${BISON_EXECUTABLE} (${BISON_VERSION}) and archived" )
 endif ()
 
 function ( MY_BISON_ALLOWING_UNITY ParserName ParserSrc Dependency TargetBison )
-	if (NOT BISON_FOUND)
-		if (EXISTS "${BISON_DIR}/bis${ParserSrc}.c" AND EXISTS "${BISON_DIR}/bis${ParserSrc}.h")
-			infomsg ( "Will use pre-built ${BISON_DIR}/bis${ParserSrc}.c and ${BISON_DIR}/bis${ParserSrc}.h for grammar parser ${ParserName}" )
-			return ()
-		else ()
-			message ( FATAL_ERROR "No pre-compiled grammar files bis${ParserSrc}.c and bis${ParserSrc}.h for ${ParserSrc}.y exists, and Bison not found. Can't continue" )
-		endif ()
+	if (NOT MANTICORE_REGEN_GRAMMAR)
+		return () # archived products are already staged into ${BISON_DIR}
 	endif ()
 
 	LIST ( APPEND ${TargetBison}_BISON "${ParserSrc}.y" )
@@ -23,13 +31,8 @@ function ( MY_BISON_ALLOWING_UNITY ParserName ParserSrc Dependency TargetBison )
 endfunction ()
 
 function ( MY_BISON ParserName ParserSrc Dependency TargetBison )
-	if (NOT BISON_FOUND)
-		if (EXISTS "${BISON_DIR}/bis${ParserSrc}.c" AND EXISTS "${BISON_DIR}/bis${ParserSrc}.h")
-			infomsg ( "Will use pre-built ${BISON_DIR}/bis${ParserSrc}.c and ${BISON_DIR}/bis${ParserSrc}.h for grammar parser ${ParserName}" )
-			return ()
-		else ()
-			message ( FATAL_ERROR "No pre-compiled grammar files bis${ParserSrc}.c and bis${ParserSrc}.h for ${ParserSrc}.y exists, and Bison not found. Can't continue" )
-		endif ()
+	if (NOT MANTICORE_REGEN_GRAMMAR)
+		return () # archived products are already staged into ${BISON_DIR}
 	endif ()
 
 	LIST ( APPEND ${TargetBison}_BISON "${ParserSrc}.y" )

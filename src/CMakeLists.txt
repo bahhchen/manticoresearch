@@ -135,8 +135,17 @@ set ( Boost_USE_STATIC_LIBS ON )
 if (CMAKE_CROSSCOMPILING AND CMAKE_SYSTEM_NAME STREQUAL Windows)
 	set ( Boost_COMPILER vc142 )
 endif ()
+# builds Boost from ${MANTICORE_DEPS_DIR}/boost and points BOOST_ROOT/Boost_DIR at that install
+include ( GetBoost )
 # ver 1.64 for process; filesystem need for process; ver 1.71 for limit_handles
-find_package ( Boost 1.71.0 REQUIRED COMPONENTS context filesystem  )
+if (NOT TARGET Boost::context)
+	find_package ( Boost 1.71.0 REQUIRED COMPONENTS context filesystem  )
+endif ()
+# b2-installed BoostConfig exports Boost::headers; older/module mode exports Boost::boost
+if (NOT TARGET Boost::boost)
+	add_library ( Boost::boost INTERFACE IMPORTED )
+	set_target_properties ( Boost::boost PROPERTIES INTERFACE_LINK_LIBRARIES Boost::headers )
+endif ()
 target_link_libraries ( lextra INTERFACE Boost::boost Boost::context )
 
 # Fixme! That is temporary solution - as we just use some headers of Boost::fiber, and that is available by default.
@@ -172,6 +181,13 @@ set ( SEARCHD_H searchdaemon.h searchdconfig.h searchdddl.h searchdexpr.h search
 		frontendschema.h debug_cmds.h dynamic_idx.h sphinxexcerpt.h querystats.h)
 
 
+# bison/flex products: either taken from the archive (default, no bison/flex needed) or regenerated.
+# See cmake/grammar_archive.cmake.
+include ( grammar_archive )
+if (NOT MANTICORE_REGEN_GRAMMAR)
+	stage_archived_grammar ( "${CMAKE_CURRENT_SOURCE_DIR}" "${MANTICORE_BINARY_DIR}/config" )
+endif ()
+
 # add the extra targets in the case we want on-the-fly grammar compiler
 include (mybison)
 
@@ -186,16 +202,14 @@ MY_BISON ( SQLExtraParser sphinxql_extra sphinxql_extra.cpp SEARCHD )
 source_group ( "Grammar sources" FILES ${LMANTICORE_BISON} ${SEARCHD_BISON} )
 
 # add the extra targets in the case we want on-the-fly lex compiler
-find_package ( FLEX QUIET )
 set ( FLEX_DIR "${MANTICORE_BINARY_DIR}/config" )
+if (MANTICORE_REGEN_GRAMMAR)
+	find_package ( FLEX REQUIRED )
+	infomsg ( "MANTICORE_REGEN_GRAMMAR is ON - lexers will be rebuilt by ${FLEX_EXECUTABLE} (${FLEX_VERSION}) and archived" )
+endif ()
 function ( MY_FLEX LexerName LexerSrc Dependency TargetFlex )
-	if (NOT FLEX_FOUND)
-		if (EXISTS "${FLEX_DIR}/flex${LexerSrc}.c")
-			infomsg ( "Will use pre-built ${FLEX_DIR}/flex${LexerSrc}.c for lexer ${LexerName}" )
-			return ()
-		else ()
-			message ( FATAL_ERROR "No pre-compiled lexer file flex${LexerSrc}.c for ${LexerSrc}.l exists, and Flex not found. Can't continue" )
-		endif ()
+	if (NOT MANTICORE_REGEN_GRAMMAR)
+		return () # archived products are already staged into ${FLEX_DIR}
 	endif ()
 
 	LIST ( APPEND ${TargetFlex}_FLEX "${LexerSrc}.l" )
@@ -304,13 +318,24 @@ add_subdirectory ( daemon )
 add_executable ( searchd searchd.cpp )
 target_link_libraries ( searchd daemon searchd_ssl lmanticore lsearchd )
 
+# MANTICORE_REGEN_GRAMMAR=ON only: searchd pulls in every generated parser/lexer, so by the time it
+# is linked all products exist and can be written back into src/generated_grammar together with a
+# refreshed hash manifest.
+add_grammar_writeback ( searchd "${CMAKE_CURRENT_SOURCE_DIR}" "${MANTICORE_BINARY_DIR}/config" )
+
+# indexer is not part of the search-service product - index building is done by search-service
+# writing into RT tables. See cmake/offline_preset.cmake.
+option ( WITH_INDEXER "build and install the indexer tool" ON )
+
 if (NOT STATIC_BINARY)
-	add_executable ( indexer indexer.cpp )
+	if (WITH_INDEXER)
+		add_executable ( indexer indexer.cpp )
+		target_link_libraries ( indexer indexer_sources lmanticore )
+	endif ()
 	add_executable ( indextool indextool.cpp )
 	add_executable ( spelldump spelldump.cpp )
 	add_executable ( wordbreaker wordbreaker.cpp )
 	add_executable ( index_converter index_converter.cpp )
-	target_link_libraries ( indexer indexer_sources lmanticore )
 	target_link_libraries ( indextool lmanticore )
 	target_link_libraries ( spelldump lmanticore )
 	target_link_libraries ( wordbreaker lmanticore )
@@ -321,7 +346,9 @@ endif ()
 
 if (SPLIT_SYMBOLS)
 	include ( split )
-	split_dbg ( indexer )
+	if (WITH_INDEXER)
+		split_dbg ( indexer )
+	endif ()
 	split_dbg ( indextool )
 	split_dbg ( searchd )
 	split_dbg ( spelldump )
@@ -331,7 +358,10 @@ endif ()
 
 INSTALL ( TARGETS searchd RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT searchd )
 if (NOT STATIC_BINARY)
-	INSTALL ( TARGETS indexer indextool spelldump wordbreaker RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT tools )
+	INSTALL ( TARGETS indextool spelldump wordbreaker RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT tools )
+	if (WITH_INDEXER)
+		INSTALL ( TARGETS indexer RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT tools )
+	endif ()
 	INSTALL ( TARGETS index_converter RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT converter )
 	INSTALL ( FILES sphinxudf.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/manticore COMPONENT devel )
 endif ()
@@ -347,8 +377,10 @@ if (WIN32)
 	getruntime ( libs daemon )
 	install ( PROGRAMS ${libs} DESTINATION bin COMPONENT searchd )
 	unset ( libs )
-	getruntime ( libs indexer )
-	install ( PROGRAMS ${libs} DESTINATION bin COMPONENT tools )
+	if (WITH_INDEXER)
+		getruntime ( libs indexer )
+		install ( PROGRAMS ${libs} DESTINATION bin COMPONENT tools )
+	endif ()
 	if (BUILD_TESTING)
 #		getruntime ( libs indexer ) # is just set above
 		getruntime ( libs common )

@@ -32,3 +32,9 @@
 [submodule "deps/icu"]
 	path = deps/icu
 	url = https://github.com/unicode-org/icu.git
+[submodule "deps/json"]
+	path = deps/json
+	url = https://github.com/nlohmann/json.git
+[submodule "deps/CRoaring"]
+	path = deps/CRoaring
+	url = https://github.com/RoaringBitmap/CRoaring.git

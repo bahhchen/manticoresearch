@@ -8,19 +8,15 @@
 # implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 # See the License for more information.
 #=============================================================================
-# This file need to get libstemmer sources
-# First it try 'traditional' way - find stemmer package.
-# Then (if it is not found) it try to look into ${LIBS_BUNDLE} for file named 'libstemmer_c.tgz'
-# It is supposed, that file (if any) contains archive from snowball with stemmer's sources.
-# If no file found, it will try to fetch it from
-# https://snowballstem.org/dist/libstemmer_c.tgz
-
-set ( STEMMER_REMOTE "https://github.com/manticoresoftware/snowball/archive/refs/tags/v3.0.3.tar.gz" )
-set ( STEMMER_BUNDLEZIP "${LIBS_BUNDLE}/libstemmer_c.tgz" )
-set ( STEMMER_SRC_MD5 "4fec9f845790b1758175bd16e06e4fe6" )
+# This file needs to get libstemmer sources.
+#
+# Offline build: sources come from ${MANTICORE_DEPS_DIR}/snowball, nothing is downloaded. The tree
+# is staged aside because our own CMakeLists.txt has to be dropped into it.
+#
+# Upstream origin (kept for version upgrades): https://github.com/manticoresoftware/snowball, v3.0.3
 
 cmake_minimum_required ( VERSION 3.17 FATAL_ERROR )
-include ( update_bundle )
+include ( local_deps )
 
 # if it is allowed to use system library - try to use it
 if (NOT WITH_STEMMER_FORCE_STATIC)
@@ -32,13 +28,14 @@ endif ()
 find_package ( stemmer CONFIG )
 return_if_target_found ( stemmer::stemmer "ready (no need to build)" )
 
-# not found. Populate and prepare sources
-select_nearest_url ( STEMMER_PLACE stemmer ${STEMMER_BUNDLEZIP} ${STEMMER_REMOTE} )
-fetch_and_check ( stemmer ${STEMMER_PLACE} ${STEMMER_SRC_MD5} STEMMER_SRC )
-execute_process ( COMMAND ${CMAKE_COMMAND} -E copy_if_different "${MANTICORE_SOURCE_DIR}/libstemmer_c/CMakeLists.txt" "${STEMMER_SRC}/CMakeLists.txt" )
+# not found. Take local sources, staged aside so that the deps folder stays pristine
+resolve_local_src ( stemmer STEMMER_ORIG )
+stage_local_src ( stemmer "${STEMMER_ORIG}" STEMMER_SRC )
+configure_file ( "${MANTICORE_SOURCE_DIR}/libstemmer_c/CMakeLists.txt" "${STEMMER_SRC}/CMakeLists.txt" COPYONLY )
 
 # build external project
 get_build ( STEMMER_BUILD stemmer )
+reset_stale_external_build ( stemmer "${STEMMER_BUILD}" )
 external_build ( stemmer STEMMER_SRC STEMMER_BUILD )
 
 # now it should find

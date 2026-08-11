@@ -51,6 +51,11 @@ set ( COMPANY_NAME "Manticore Software LTD" )
 set ( CPACK_PACKAGE_NAME "${PACKAGE_NAME}" )
 
 include ( setup_distribution_build ) # process PACK, DISTR_BUILD and ENV{DISTR}
+
+# offline / no-database preset. Must stay after setup_distribution_build, which would otherwise
+# force WITH_MYSQL / WITH_POSTGRESQL / WITH_EXPAT / WITH_SSL back on, and before anything reads WITH_*.
+include ( offline_preset )
+
 include ( FeatureSummary )
 
 # Option to build Source RPMs (SRPMs) - provides instructions for proper SRPM generation
@@ -228,11 +233,15 @@ if (WIN32)
 	if (WITH_GALERA)
 		message ( FATAL_ERROR "Galera is not supported on win; reconfigure with WITH_GALERA=FALSE" )
 	endif ()
-else ()
+elseif (NOT DEFINED WITH_GALERA OR WITH_GALERA)
+	# GetGALERA downloads galera+wsrep sources, so it is only entered when galera is really wanted
 	include ( GetGALERA )
 	if (WITH_GALERA)
 		cache_galera_module_name () # write GALERA_SONAME as var to cache
 	endif ()
+	diag ( WITH_GALERA )
+	bannervar ( WITH_GALERA )
+else ()
 	diag ( WITH_GALERA )
 	bannervar ( WITH_GALERA )
 endif ()
@@ -266,13 +275,19 @@ with_get ( jieba "Jieba" "Chinese text segmentation tool" )
 
 # Support for OpenSSL
 set ( OPENSSL_USE_STATIC_LIBS ON )
-include ( GetSSL )
+if (NOT DEFINED WITH_SSL OR WITH_SSL)
+	# GetSSL runs 'vcpkg install openssl', so it is only entered when ssl is really wanted
+	include ( GetSSL )
+endif ()
 with_menu_comp ( OpenSSL SSL "OpenSSL" "for encrypted networking" )
 win_install_c ( OpenSSL SSL daemon )
 
 trace ( OpenSSL::Crypto )
 
-# Support for ZLIB
+# Support for ZLIB - built from local sources, defines ZLIB::ZLIB so with_menu skips find_package
+if (WITH_ZLIB)
+	include ( GetZLIB )
+endif ()
 with_menu ( ZLIB "zlib" "for compressed data and networking" )
 win_install ( ZLIB common )
 
