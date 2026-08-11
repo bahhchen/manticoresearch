@@ -25,3 +25,6 @@
 [submodule "deps/columnar"]
 	path = deps/columnar
 	url = https://github.com/manticoresoftware/columnar.git
+[submodule "deps/boost"]
+	path = deps/boost
+	url = https://github.com/boostorg/boost.git
