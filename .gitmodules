@@ -28,6 +28,7 @@
 [submodule "deps/boost"]
 	path = deps/boost
 	url = https://github.com/boostorg/boost.git
+	ignore = all
 [submodule "deps/icu"]
 	path = deps/icu
 	url = https://github.com/unicode-org/icu.git
