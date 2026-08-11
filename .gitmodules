@@ -1,3 +1,27 @@
 [submodule "translator"]
 	path = translator
 	url = https://github.com/manticoresoftware/translator.git
+[submodule "deps/cctz"]
+	path = deps/cctz
+	url = https://github.com/manticoresoftware/cctz.git
+[submodule "deps/xxHash"]
+	path = deps/xxHash
+	url = https://github.com/manticoresoftware/xxHash.git
+[submodule "deps/re2"]
+	path = deps/re2
+	url = https://github.com/manticoresoftware/re2.git
+[submodule "deps/cppjieba"]
+	path = deps/cppjieba
+	url = https://github.com/manticoresoftware/cppjieba.git
+[submodule "deps/zlib"]
+	path = deps/zlib
+	url = https://github.com/madler/zlib.git
+[submodule "deps/snowball"]
+	path = deps/snowball
+	url = https://github.com/manticoresoftware/snowball.git
+[submodule "deps/uni-algo"]
+	path = deps/uni-algo
+	url = https://github.com/manticoresoftware/uni-algo.git
+[submodule "deps/columnar"]
+	path = deps/columnar
+	url = https://github.com/manticoresoftware/columnar.git
