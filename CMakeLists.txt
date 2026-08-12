@@ -424,6 +424,11 @@ if (NOT installed) # GNUInstallDirs wasn't yet included...
 	endif ()
 endif ()
 
+# install-less relocatable deployment for the search-service product: renames the daemon and
+# redirects FULL_SHARE_DIR to a relative path. Must stay after the block above (which sets
+# FULL_SHARE_DIR from GNUInstallDirs) and before src/ configures config.h out of it.
+include ( portable_deploy )
+
 set ( CPACK_RPM_COMPONENT_INSTALL 1 )
 set ( CPACK_DEB_COMPONENT_INSTALL 1 )
 set ( CPACK_ARCHIVE_COMPONENT_INSTALL 1 )

@@ -323,6 +323,11 @@ target_link_libraries ( searchd daemon searchd_ssl lmanticore lsearchd )
 # refreshed hash manifest.
 add_grammar_writeback ( searchd "${CMAKE_CURRENT_SOURCE_DIR}" "${MANTICORE_BINARY_DIR}/config" )
 
+# install-less deployment: rename the daemon (MANTICORE_SEARCHD_NAME) and copy it with its
+# share/ tree into MANTICORE_PORTABLE_DEPLOY_DIR. No-op when that dir is not set.
+# Has to be called here - add_custom_command(TARGET) requires the target's own scope.
+manticore_portable_deploy_searchd ()
+
 # indexer is not part of the search-service product - index building is done by search-service
 # writing into RT tables. See cmake/offline_preset.cmake.
 option ( WITH_INDEXER "build and install the indexer tool" ON )

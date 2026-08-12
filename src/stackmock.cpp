@@ -25,6 +25,21 @@
 //#define KNOWN_EXPR_SIZE 48
 //#define KNOWN_FILTER_SIZE 400
 
+// The mock expression is parsed/committed in a nested coroutine whose stack is sized for optimized
+// builds ("100K frame per level should fit any arch" below). That assumption does not hold for an
+// unoptimized MSVC build, where one parser level costs ~13K: the probe blows that stack somewhere
+// around depth 15 and, since a coroutine stack is a plain memory block with no guard page, it comes
+// out as an access violation right after the banner, before the config is even read.
+// So give the nested coroutines a bigger stack in debug builds. Only these nested stacks grow -
+// m_dMockStack, which is memset and rescanned on every measurement, keeps its size, and so does the
+// measuring loop's own "stop before the next frame does not fit" guard.
+// Release builds are bit-identical to upstream (multiplier 1).
+#ifdef NDEBUG
+static constexpr int MOCK_NESTED_STACK_MULT = 1;
+#else
+static constexpr int MOCK_NESTED_STACK_MULT = 16;
+#endif
+
 class StackMeasurer_c
 {
 protected:
@@ -263,7 +278,7 @@ class EvalExprStackSize_c final : public StackMeasurer_c
 		auto iStack = m_dMockStack.GetLengthBytes64 ();
 
 		{ // parse in dedicated coro (hope, 100K frame per level should fit any arch)
-			CSphFixedVector<BYTE> dSafeStack { iStack };
+			CSphFixedVector<BYTE> dSafeStack { iStack * MOCK_NESTED_STACK_MULT };
 			Threads::MockCallCoroutine ( dSafeStack, [&tParams] {	// do in coro as for fat expr it might already require dedicated stack
 				tParams.m_pExprBase = sphExprParse ( tParams.m_sExpr, tParams.m_tSchema, nullptr, tParams.m_sError, tParams.m_tArgs );
 			});
@@ -340,7 +355,7 @@ class DeleteExprStackSize_c final : public StackMeasurer_c
 		auto iStack = m_dMockStack.GetLengthBytes64 ();
 
 		{ // parse in dedicated coro (hope, 100K frame per level should fit any arch)
-			CSphFixedVector<BYTE> dSafeStack { iStack };
+			CSphFixedVector<BYTE> dSafeStack { iStack * MOCK_NESTED_STACK_MULT };
 			Threads::MockCallCoroutine ( dSafeStack, [&tParams] {	// do in coro as for fat expr it might already require dedicated stack
 				tParams.m_pExprBase = sphExprParse ( tParams.m_sExpr, tParams.m_tSchema, nullptr, tParams.m_sError, tParams.m_tArgs );
 			});
@@ -531,7 +546,7 @@ public:
 		bool bOldBinlog = Binlog::MockDisabled ( true );
 
 		{ // commit requires coro ctx (hope, 100K frame per level should fit any arch)
-			CSphFixedVector<BYTE> dSafeStack { 100 * 1024 };
+			CSphFixedVector<BYTE> dSafeStack { 100 * 1024 * MOCK_NESTED_STACK_MULT };
 			Threads::MockCallCoroutine ( dSafeStack, [this, &tAcc] { // do in coro as for fat expr it might already require dedicated stack
 				m_pRtIndex->Commit ( nullptr, &tAcc );
 			} );
