@@ -139,7 +139,7 @@ SI::Index_i * CreateSecondaryIndex ( const char * szFile, CSphString & sError )
 
 	assert ( g_fnCreateSI );
 
-	SI::IndexSettings_t tSettings { .m_uBlockCacheSize = g_uBlockCacheSize };
+	SI::IndexSettings_t tSettings { g_uBlockCacheSize };
 
 	std::string sTmpError;
 	SI::Index_i * pSIdx = g_fnCreateSI ( szFile, tSettings, sTmpError );

@@ -28,6 +28,35 @@ endif ()
 resolve_local_src ( boost BOOST_SRC )
 get_build ( BOOST_BUILD boost )
 
+# deps/boost (boostorg/boost) is a superproject with ~150 nested submodules of its own
+# (tools/build, libs/context, libs/filesystem, ...). Two unrelated things produce the same
+# symptom here (files missing under BOOST_SRC), so the message below covers both:
+#   1. A shallow `git submodule update --init` (no --recursive) leaves the nested submodules as
+#      empty directories.
+#   2. Building on a remote synced from this tree (e.g. Visual Studio's remote CMake / rsync):
+#      VS syncs incrementally based on changes it tracked itself, and content produced by a plain
+#      `git submodule update` on the command line was never part of that tracked set, so it can
+#      stay unsynced indefinitely even though it exists locally. This is a known, unresolved gap
+#      in VS's remote sync, not something this script can detect from here - if the sources ARE
+#      complete on the machine this configure runs on, that is almost certainly the cause.
+if (NOT EXISTS "${BOOST_SRC}/tools/build/src/engine/build.sh"
+		OR NOT EXISTS "${BOOST_SRC}/libs/context/src"
+		OR NOT EXISTS "${BOOST_SRC}/libs/filesystem/src")
+	message ( FATAL_ERROR
+			"Boost sources at ${BOOST_SRC} look incomplete - nested submodules "
+			"(tools/build, libs/context, libs/filesystem, ...) are not checked out.\n"
+			"If this machine has no direct git checkout of the repo (e.g. it is a Visual Studio "
+			"remote CMake target synced from another machine via rsync): the sync most likely "
+			"skipped these files because they were never part of VS's tracked change set - force "
+			"a full resync (or clean the remote source folder and let VS resync from scratch), or "
+			"keep this dependency out of the synced tree entirely via "
+			"-DMANTICORE_DEPS_DIR=<path already populated directly on this machine>.\n"
+			"If this IS the machine you run 'git submodule update' on, run from the repository root:\n"
+			"    git submodule update --init --recursive\n"
+			"This needs network access once to fetch boostorg's ~150 nested repos; "
+			"the build itself stays offline." )
+endif ()
+
 set ( BOOST_STAMP "${BOOST_BUILD}/.manticore_boost.stamp" )
 
 if (NOT EXISTS "${BOOST_STAMP}")

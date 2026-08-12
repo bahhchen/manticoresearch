@@ -1301,7 +1301,7 @@ bool SIContainer_c::CreateIterators ( std::vector<common::BlockIterator_i *> & d
 		if ( i.m_pIndex->IsEnabled ( tFilter.m_sName ) )
 		{
 			std::string sWarningSTL, sErrorSTL;
-			SI::IteratorSettings_t tSettings { .m_pBounds = pBounds, .m_uMaxValues = uMaxValues, .m_iRsetSize = iRsetSize, .m_iCutoff = iCutoff, .m_bUseCache = bUseSICache };
+			SI::IteratorSettings_t tSettings { pBounds, uMaxValues, iRsetSize, iCutoff, bUseSICache };
 			bool bOk = i.m_pIndex->CreateIterators ( dIterators, tFilter, tSettings, sWarningSTL, sErrorSTL );
 			sWarning = sWarningSTL.c_str();
 			sError = sErrorSTL.c_str();

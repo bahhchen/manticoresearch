@@ -6435,9 +6435,11 @@ struct NamedIndexType_t
 
 	NamedIndexType_t() = default;
 	NamedIndexType_t ( NamedIndexType_t && ) noexcept = default;
-	NamedIndexType_t & operator= ( NamedIndexType_t && ) noexcept = default;
-	NamedIndexType_t ( const NamedIndexType_t & ) noexcept = default;
-	NamedIndexType_t & operator= ( const NamedIndexType_t & ) noexcept = default;
+	// not noexcept: CSphString's copy ctor and copy-and-swap operator= aren't noexcept, so an
+	// explicit noexcept here would make the compiler mark these deleted (mismatched exception spec).
+	NamedIndexType_t & operator= ( NamedIndexType_t && ) = default;
+	NamedIndexType_t ( const NamedIndexType_t & ) = default;
+	NamedIndexType_t & operator= ( const NamedIndexType_t & ) = default;
 
 
 	NamedIndexType_t ( CSphString sName, CSphString sCluster, IndexType_e eType )

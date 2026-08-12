@@ -35,9 +35,25 @@ option ( MANTICORE_REGEN_GRAMMAR "regenerate bison/flex products and refresh src
 set ( MANTICORE_GRAMMAR_DIR "${MANTICORE_SOURCE_DIR}/src/generated_grammar" CACHE PATH "Folder with archived bison/flex products" )
 set ( MANTICORE_GRAMMAR_MANIFEST "grammar_sources.sha256" )
 
-# must stay in sync with the MY_BISON / MY_FLEX calls in src/CMakeLists.txt
-set ( MANTICORE_BISON_GRAMMARS sphinxexpr sphinxselect sphinxjson sphinxql ddl sphinxql_debug sphinxql_second sphinxql_extra )
+# must stay in sync with the MY_BISON / MY_FLEX calls in src/CMakeLists.txt and
+# src/sphinxquery/CMakeLists.txt
+set ( MANTICORE_BISON_GRAMMARS sphinxexpr sphinxselect sphinxjson sphinxql ddl sphinxql_debug sphinxql_second sphinxql_extra sphinxquery )
 set ( MANTICORE_FLEX_LEXERS sphinxjson sphinxexpr sphinxql ddl sphinxql_debug sphinxql_second sphinxql_extra )
+
+# Grammar sources normally live directly under src/ as <name>.y / <name>.l. The handful that don't
+# (currently just sphinxquery, built by its own src/sphinxquery/CMakeLists.txt) are listed here as
+# NAME -> subfolder; the generated products stay flat (bissphinxquery.c/.h) regardless, since
+# BISON_DIR/FLEX_DIR is always the single shared ${MANTICORE_BINARY_DIR}/config.
+set ( MANTICORE_GRAMMAR_SUBDIR_sphinxquery "sphinxquery" )
+
+# relative path (from src/) of a grammar's own .y/.l source, given its base name
+function ( _grammar_src_rel NAME EXT OUTVAR )
+	if (DEFINED MANTICORE_GRAMMAR_SUBDIR_${NAME})
+		set ( ${OUTVAR} "${MANTICORE_GRAMMAR_SUBDIR_${NAME}}/${NAME}.${EXT}" PARENT_SCOPE )
+	else ()
+		set ( ${OUTVAR} "${NAME}.${EXT}" PARENT_SCOPE )
+	endif ()
+endfunction ()
 
 # names of the archived products (bis<name>.c/.h for grammars, flex<name>.c for lexers)
 function ( grammar_product_names OUTVAR )
@@ -51,14 +67,16 @@ function ( grammar_product_names OUTVAR )
 	set ( ${OUTVAR} "${_names}" PARENT_SCOPE )
 endfunction ()
 
-# names of the grammar sources the manifest covers
+# relative (to src/) paths of the grammar sources the manifest covers
 function ( grammar_source_names OUTVAR )
 	set ( _names "" )
 	foreach (_g ${MANTICORE_BISON_GRAMMARS})
-		list ( APPEND _names "${_g}.y" )
+		_grammar_src_rel ( ${_g} y _rel )
+		list ( APPEND _names "${_rel}" )
 	endforeach ()
 	foreach (_l ${MANTICORE_FLEX_LEXERS})
-		list ( APPEND _names "${_l}.l" )
+		_grammar_src_rel ( ${_l} l _rel )
+		list ( APPEND _names "${_rel}" )
 	endforeach ()
 	set ( ${OUTVAR} "${_names}" PARENT_SCOPE )
 endfunction ()
@@ -137,8 +155,28 @@ function ( add_grammar_writeback TRG SRC_DIR OUT_DIR )
 		return ()
 	endif ()
 
-	string ( REPLACE ";" "," _bisons "${MANTICORE_BISON_GRAMMARS}" )
-	string ( REPLACE ";" "," _flexes "${MANTICORE_FLEX_LEXERS}" )
+	# NAMES/SRCS are parallel lists (name -> its .y/.l path relative to SRC_DIR) - grammar_writeback.cmake
+	# runs in script mode with no access to the functions above, so the mapping travels as plain -D args.
+	set ( _bison_names "" )
+	set ( _bison_srcs "" )
+	foreach (_g ${MANTICORE_BISON_GRAMMARS})
+		_grammar_src_rel ( ${_g} y _rel )
+		list ( APPEND _bison_names "${_g}" )
+		list ( APPEND _bison_srcs "${_rel}" )
+	endforeach ()
+
+	set ( _flex_names "" )
+	set ( _flex_srcs "" )
+	foreach (_l ${MANTICORE_FLEX_LEXERS})
+		_grammar_src_rel ( ${_l} l _rel )
+		list ( APPEND _flex_names "${_l}" )
+		list ( APPEND _flex_srcs "${_rel}" )
+	endforeach ()
+
+	string ( REPLACE ";" "," _bison_names "${_bison_names}" )
+	string ( REPLACE ";" "," _bison_srcs "${_bison_srcs}" )
+	string ( REPLACE ";" "," _flex_names "${_flex_names}" )
+	string ( REPLACE ";" "," _flex_srcs "${_flex_srcs}" )
 
 	add_custom_command ( TARGET ${TRG} POST_BUILD
 			COMMAND "${CMAKE_COMMAND}"
@@ -146,8 +184,10 @@ function ( add_grammar_writeback TRG SRC_DIR OUT_DIR )
 			"-DBIN_CONFIG=${OUT_DIR}"
 			"-DGRAMMAR_DIR=${MANTICORE_GRAMMAR_DIR}"
 			"-DMANIFEST_NAME=${MANTICORE_GRAMMAR_MANIFEST}"
-			"-DBISON_LIST=${_bisons}"
-			"-DFLEX_LIST=${_flexes}"
+			"-DBISON_NAMES=${_bison_names}"
+			"-DBISON_SRCS=${_bison_srcs}"
+			"-DFLEX_NAMES=${_flex_names}"
+			"-DFLEX_SRCS=${_flex_srcs}"
 			-P "${MANTICORE_SOURCE_DIR}/cmake/grammar_writeback.cmake"
 			COMMENT "Writing bison/flex products back to ${MANTICORE_GRAMMAR_DIR}"
 			VERBATIM )

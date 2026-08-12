@@ -171,7 +171,7 @@ void Expr_KNNDist_c::Command ( ESphExprCommand eCmd, void * pArg )
 			if ( pColumnar && !m_bUseAttribute )
 			{
 				std::string sError; // FIXME! report errors
-				columnar::IteratorHints_t tHints { .m_bNeedStringHashes = false, .m_bBuffered = false };
+				columnar::IteratorHints_t tHints { false, false };
 				m_pIterator = CreateColumnarIterator ( pColumnar, m_tAttr.m_sName.cstr(), sError, tHints );
 			}
 			else
